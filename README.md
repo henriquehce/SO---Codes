@@ -59,20 +59,20 @@ bash
 Copiar código
 ./cliente_ambos
 Funcionamento Detalhado
-1. servidor.c
+- 1. servidor.c
 O servidor utiliza threads para processar requisições de clientes. Ele possui um pool de threads com algumas threads dedicadas ao processamento de números e outras ao processamento de strings.
 
 Pipes Nomeados (FIFOs): Dois pipes são criados:
 /tmp/fifo_numeros: Pipe para clientes que enviam números.
 /tmp/fifo_strings: Pipe para clientes que enviam strings.
 Fila de Tarefas: As requisições recebidas dos clientes são armazenadas em uma fila e processadas pelas threads do servidor.
-2. cliente.c
+- 2. cliente.c
 O cliente permite que o usuário escolha entre enviar números ou strings. Após a escolha, o cliente entra em um loop onde envia requisições continuamente para o servidor.
 
-3. multi_cliente.c
+- 3. multi_cliente.c
 Simula 10 clientes simultâneos, utilizando threads para enviar números e strings ao servidor. As threads alternam entre enviar números ou strings.
 
-4. cliente_ambos.c
+- 4. cliente_ambos.c
 Este cliente envia tanto números quanto strings para o servidor a cada ciclo. Ele abre os pipes correspondentes e envia as duas requisições.
 
 Tecnologias Utilizadas
