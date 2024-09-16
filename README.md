@@ -14,7 +14,7 @@ multi_cliente.c: Simula vários clientes simultâneos, alternando entre envio de
 cliente_ambos.c: Um cliente que envia ambos os tipos de requisições (números e strings) para o servidor em ciclos contínuos.
 
 Como Rodar o Projeto
-1. Compilar os Códigos
+- 1. Compilar os Códigos
 Use o GCC para compilar cada um dos códigos.
 
 bash
@@ -31,7 +31,7 @@ gcc multi_cliente.c -o multi_cliente -lpthread
 # Compilar o cliente que envia ambos (número e string)
 gcc cliente_ambos.c -o cliente_ambos
 
-2. Executar o Servidor
+- 2. Executar o Servidor
 O servidor deve ser iniciado primeiro para criar os pipes e estar pronto para receber as requisições dos clientes.
 
 bash
