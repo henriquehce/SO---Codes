@@ -76,10 +76,10 @@ Simula 10 clientes simultâneos, utilizando threads para enviar números e strin
 Este cliente envia tanto números quanto strings para o servidor a cada ciclo. Ele abre os pipes correspondentes e envia as duas requisições.
 
 Tecnologias Utilizadas
-Linguagem C
-Threads (biblioteca pthread)
-Pipes Nomeados (FIFOs) para comunicação entre processos
-Mutex e Condições para sincronização no servidor
-Observações
+- Linguagem C
+- Threads (biblioteca pthread)
+- Pipes Nomeados (FIFOs) para comunicação entre processos
+- Mutex e Condições para sincronização no servidor
+- Observações
 O servidor deve estar rodando antes de iniciar os clientes, pois ele é responsável por criar os pipes nomeados.
 Para finalizar o servidor e os clientes, você pode usar Ctrl+C.
