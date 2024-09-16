@@ -1,97 +1,85 @@
 # SO---Codes
 
-Servidor e Cliente para Comunicação via Pipes:
+Projeto T1 - Sistema de Servidor e Clientes com Pipes e Threads
+Este projeto implementa um sistema de servidor com pool de threads que recebe e processa requisições de clientes. As requisições podem ser de dois tipos:
 
-Este projeto demonstra a implementação de um servidor e cliente(s) que se comunicam utilizando pipes nomeados (FIFOs). Existem duas versões deste sistema:
-
-Servidor para um único cliente (servidor.c e cliente.c)
-Servidor para múltiplos clientes (servidor2.c e cliente2.c)
-
-Requisitos
-Sistema operacional Linux (para o suporte a pipes nomeados).
-GCC (GNU Compiler Collection) para compilar os arquivos em C.
+Números: os clientes enviam números aleatórios.
+Strings: os clientes enviam strings aleatórias.
+O sistema é implementado utilizando pipes nomeados (FIFOs) para a comunicação entre os clientes e o servidor, e threads para processar as requisições simultaneamente. O servidor pode processar múltiplos clientes ao mesmo tempo.
 
 Estrutura do Projeto
+servidor.c: Implementa o servidor que recebe e processa as requisições de números e strings.
+cliente.c: Simula um único cliente que envia ou números ou strings, de acordo com a escolha do usuário.
+multi_cliente.c: Simula vários clientes simultâneos, alternando entre envio de números e strings.
+cliente_ambos.c: Um cliente que envia ambos os tipos de requisições (números e strings) para o servidor em ciclos contínuos.
+
+Como Rodar o Projeto
+1. Compilar os Códigos
+Use o GCC para compilar cada um dos códigos.
+
 bash
 Copiar código
-.
-├── cliente.c        # Cliente para a versão de um único cliente
-├── cliente2.c       # Cliente para a versão de múltiplos clientes
-├── servidor.c       # Servidor para a versão de um único cliente
-├── servidor2.c      # Servidor para a versão de múltiplos clientes
-└── README.md        # Instruções do projeto
-
-1. Servidor para um Único Cliente
-Arquivos:
-servidor.c: Implementa o servidor que se comunica com apenas um cliente.
-cliente.c: Implementa o cliente que envia requisições e recebe respostas do servidor.
-Descrição:
-Nesta versão, o servidor pode atender apenas um cliente por vez. O cliente pode solicitar números aleatórios ou strings aleatórias, que o servidor retorna. A comunicação é feita via pipes nomeados.
-
-Como Compilar:
-bash
-Copiar código
+# Compilar o servidor
 gcc servidor.c -o servidor -lpthread
-gcc cliente.c -o cliente
-Como Executar:
-Execute o servidor em um terminal:
+
+# Compilar o cliente simples
+gcc cliente.c -o cliente -lpthread
+
+# Compilar o cliente múltiplo
+gcc multi_cliente.c -o multi_cliente -lpthread
+
+# Compilar o cliente que envia ambos (número e string)
+gcc cliente_ambos.c -o cliente_ambos
+
+2. Executar o Servidor
+O servidor deve ser iniciado primeiro para criar os pipes e estar pronto para receber as requisições dos clientes.
 
 bash
 Copiar código
 ./servidor
-Em outro terminal, execute o cliente:
+3. Executar os Clientes
+Você pode executar qualquer um dos clientes, dependendo da simulação desejada.
+
+Cliente Simples (cliente.c)
+Este cliente envia números ou strings, conforme a escolha do usuário.
 
 bash
 Copiar código
 ./cliente
-Funcionamento:
-O cliente enviará uma requisição para o servidor.
-O servidor responde ao cliente com um número aleatório ou uma string aleatória.
-O cliente exibe a resposta recebida.
-O cliente pode optar por encerrar a conexão enviando um sinal de saída (0), o que encerra o servidor.
-
-
-2. Servidor para Múltiplos Clientes
-Arquivos:
-servidor2.c: Implementa o servidor que pode atender múltiplos clientes simultaneamente.
-cliente2.c: Implementa o cliente que pode se comunicar com o servidor em paralelo com outros clientes.
-Descrição:
-Nesta versão, o servidor pode lidar com múltiplos clientes simultâneos. O servidor utiliza threads para processar as requisições de diferentes clientes em paralelo, e os clientes são implementados como processos distintos.
-
-Como Compilar:
-bash
-Copiar código
-gcc servidor2.c -o servidor2 -lpthread
-gcc cliente2.c -o cliente2
-Como Executar:
-Execute o servidor em um terminal:
+Cliente Múltiplo (multi_cliente.c)
+Este cliente simula 10 clientes simultâneos, onde metade envia números e a outra metade envia strings.
 
 bash
 Copiar código
-./servidor2
-Em outro terminal, execute o cliente que simula múltiplos processos clientes:
+./multi_cliente
+Cliente Ambos (cliente_ambos.c)
+Este cliente envia tanto números quanto strings em cada ciclo de execução.
 
 bash
 Copiar código
-./cliente2
-Funcionamento:
-O cliente2 criará vários processos filhos, e cada processo fará múltiplas requisições ao servidor.
-O servidor processará essas requisições simultaneamente, respondendo com números ou strings.
-O cliente exibe as respostas recebidas e termina após concluir todas as requisições.
+./cliente_ambos
+Funcionamento Detalhado
+1. servidor.c
+O servidor utiliza threads para processar requisições de clientes. Ele possui um pool de threads com algumas threads dedicadas ao processamento de números e outras ao processamento de strings.
 
-Observações:
-FIFO Pipes: Este projeto usa pipes nomeados (FIFO) para comunicação entre processos. Os pipes são criados pelo servidor e usados pelos clientes para enviar e receber mensagens.
+Pipes Nomeados (FIFOs): Dois pipes são criados:
+/tmp/fifo_numeros: Pipe para clientes que enviam números.
+/tmp/fifo_strings: Pipe para clientes que enviam strings.
+Fila de Tarefas: As requisições recebidas dos clientes são armazenadas em uma fila e processadas pelas threads do servidor.
+2. cliente.c
+O cliente permite que o usuário escolha entre enviar números ou strings. Após a escolha, o cliente entra em um loop onde envia requisições continuamente para o servidor.
 
-Paralelismo: A versão de múltiplos clientes demonstra paralelismo utilizando fork para criar processos clientes e pthread no servidor para lidar com múltiplas conexões simultaneamente.
+3. multi_cliente.c
+Simula 10 clientes simultâneos, utilizando threads para enviar números e strings ao servidor. As threads alternam entre enviar números ou strings.
 
-Limpeza dos Pipes
-Caso precise remover os pipes nomeados após executar os programas, use o comando:
+4. cliente_ambos.c
+Este cliente envia tanto números quanto strings para o servidor a cada ciclo. Ele abre os pipes correspondentes e envia as duas requisições.
 
-bash
-Copiar código
-rm /tmp/num_pipe /tmp/string_pipe
-Isso removerá os pipes criados durante a execução do servidor.
-
-Licença
-Este projeto é apenas para fins educacionais e não possui uma licença formal.
-
+Tecnologias Utilizadas
+Linguagem C
+Threads (biblioteca pthread)
+Pipes Nomeados (FIFOs) para comunicação entre processos
+Mutex e Condições para sincronização no servidor
+Observações
+O servidor deve estar rodando antes de iniciar os clientes, pois ele é responsável por criar os pipes nomeados.
+Para finalizar o servidor e os clientes, você pode usar Ctrl+C.
