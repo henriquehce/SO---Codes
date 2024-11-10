@@ -40,7 +40,7 @@ void executarTarefa(Tarefa* tarefa) {
         // Exibe a string processada
         printf("Recebida solicitação de string: %s\n", tarefa->dados);
     }
-}
+    }
 
 // Função que adiciona uma nova tarefa à fila de tarefas
 // Protegida por mutex para garantir a consistência da fila
@@ -150,12 +150,13 @@ int main() {
         pthread_create(&threadsNumeros[THREAD_NUM_NUMBERS + i], NULL, processarRequisicao, tipoRequisicaoNumero);
     }
 
-    // Cria a thread que processa a fila de tarefas
-    pthread_create(&threadProcessadorTarefas, NULL, processarFilaTarefas, NULL);
+    int* parametrosThread2 = malloc(sizeof(int) * 2);
+    parametrosThread2[0] = parametros[0];
+    parametrosThread2[1] = parametros[1];
 
-    // Aguarda a execução das threads
-    for (int i = 0; i < THREAD_NUM_NUMBERS + THREAD_NUM_STRINGS; i++) {
-        pthread_join(threadsNumeros[i], NULL);
+    if (pthread_create(&thread2, NULL, lerDados, (void*)parametrosThread2) != 0) {
+        perror("Erro ao criar a thread");
+        exit(EXIT_FAILURE);
     }
     pthread_join(threadProcessadorTarefas, NULL);
 
@@ -163,9 +164,8 @@ int main() {
     pthread_mutex_destroy(&mutexFila);
     pthread_cond_destroy(&condFila);
 
-    // Remove os pipes criados
-    unlink(fifo_numeros);
-    unlink(fifo_strings);
+    pthread_join(thread, NULL);
+    pthread_join(thread2, NULL);
 
     return 0;
 }
