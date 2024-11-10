@@ -1,6 +1,7 @@
 #include <chrono>
 #include <stdio.h>
 #include <string.h>
+#include <fstream>
 
 class Timer
 {
@@ -24,6 +25,28 @@ private:
     Timer operator=(const Timer*) = delete;
 };
 
+// Função para obter o número de page faults atuais
+void PrintPageFaults()
+{
+    std::ifstream statusFile("/proc/self/status");
+    std::string line;
+    int minorFaults = 0, majorFaults = 0;
+
+    while (std::getline(statusFile, line))
+    {
+        if (line.rfind("Minflt:", 0) == 0)
+        {
+            minorFaults = std::stoi(line.substr(line.find_last_of("\t") + 1));
+        }
+        else if (line.rfind("Majflt:", 0) == 0)
+        {
+            majorFaults = std::stoi(line.substr(line.find_last_of("\t") + 1));
+        }
+    }
+
+    printf("Page Faults - Minor: %d, Major: %d\n", minorFaults, majorFaults);
+}
+
 void BusyWait(int ms)
 {
     auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
@@ -39,22 +62,16 @@ void FastMeasure()
     printf("Busy waiting to raise the CPU frequency...\n");
     BusyWait(500);
 
-    // Lista de diferentes tamanhos de buffer para testar paginação
-    /**
-     * Array of buffer sizes in bytes.
-     * The sizes are:
-     * - 64 MB
-     * - 128 MB
-     * - 256 MB
-     * - 512 MB
-     * - 1024 MB (1 GB)
-     */
-    const int bufSizes[] = {64 * 1024 * 1024, 128 * 1024 * 1024, 256 * 1024 * 1024, 512 * 1024 * 1024, 1024 * 1024 * 1024 };
+    const int bufSizes[] = {1024 * 1024 * 1024, 2 * 1024 * 1024 * 1024, 4 * 1024 * 1024 * 1024}; // 1 GB, 2 GB, 4 GB
     const int iterationCount = 100;
 
     for (int bufSize : bufSizes)
     {
         printf("\nTesting with buffer size: %d MB\n", bufSize / (1024 * 1024));
+        
+        // Imprime o número de page faults antes do teste para o tamanho atual
+        printf("Before testing buffer size %d MB:\n", bufSize / (1024 * 1024));
+        PrintPageFaults();
 
         {
             Timer timer;
@@ -65,6 +82,7 @@ void FastMeasure()
             }
             printf("%1.4f s to allocate %d MB %d times.\n", timer.GetElapsed(), bufSize / (1024 * 1024), iterationCount);
         }
+        
         {
             Timer timer;
             double deleteTime = 0.0;
@@ -77,6 +95,7 @@ void FastMeasure()
             }
             printf("%1.4f s to allocate %d MB %d times (%1.4f s to delete).\n", timer.GetElapsed(), bufSize / (1024 * 1024), iterationCount, deleteTime);
         }
+        
         {
             int* p = new int[bufSize / sizeof(int)]();
             {
@@ -101,6 +120,7 @@ void FastMeasure()
             }
             delete[] p;
         }
+        
         {
             Timer timer;
             double deleteTime = 0.0;
@@ -114,6 +134,7 @@ void FastMeasure()
             }
             printf("%1.4f s to allocate and write %d MB %d times (%1.4f s to delete).\n", timer.GetElapsed(), bufSize / (1024 * 1024), iterationCount, deleteTime);
         }
+        
         {
             Timer timer;
             int sum = 0;
@@ -128,6 +149,10 @@ void FastMeasure()
             }
             printf("%1.4f s to allocate and read %d MB %d times, sum = %d.\n", timer.GetElapsed(), bufSize / (1024 * 1024), iterationCount, sum);
         }
+
+        // Imprime o número de page faults após o teste para o tamanho atual
+        printf("After testing buffer size %d MB:\n", bufSize / (1024 * 1024));
+        PrintPageFaults();
     }
 }
 

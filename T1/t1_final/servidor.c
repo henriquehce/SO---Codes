@@ -1,153 +1,124 @@
 #include <stdio.h>
-#include <string.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
+#include <string.h>
+#include <pthread.h>
+#include <time.h>
 
-#define THREAD_NUM_NUMBERS 2 // Quantidade de threads para processar números
-#define THREAD_NUM_STRINGS 2 // Quantidade de threads para processar strings
+#define FIFO_NUMEROS "/tmp/fifo_numeros"
+#define FIFO_STRINGS "/tmp/fifo_strings"
+#define FIFO_RESPOSTA_BASE "/tmp/fifo_resposta_cliente_"
 
-// Enum para identificar o tipo de requisição (números ou strings)
-typedef enum {REQUISICAO_NUMERO, REQUISICAO_STRING} TipoRequisicao;
-
-// Estrutura que representa uma tarefa, com seu tipo (número ou string) e os dados a serem processados
-typedef struct Tarefa {
-    TipoRequisicao tipo;
-    char dados[256]; // Buffer que armazena os dados (número ou string) da requisição
-} Tarefa;
-
-// Fila de tarefas e contador de quantas tarefas estão na fila
-Tarefa filaTarefas[256];
-int quantidadeTarefas = 0;
-
-// Mutex e variável de condição para sincronização de acesso à fila de tarefas
-pthread_mutex_t mutexFila;
-pthread_cond_t condFila;
-
-// Nomes dos pipes (FIFO) usados para comunicação entre clientes e o servidor
-char *fifo_numeros = "/tmp/fifo_numeros";
-char *fifo_strings = "/tmp/fifo_strings";
-
-// Função que executa a tarefa recebida (processa números ou strings)
-// Param: tarefa - um ponteiro para a estrutura Tarefa
-void executarTarefa(Tarefa* tarefa) {
-    if (tarefa->tipo == REQUISICAO_NUMERO) {
-        // Exibe o número processado
-        printf("Recebida solicitação de número: %s\n", tarefa->dados);
-    } else if (tarefa->tipo == REQUISICAO_STRING) {
-        // Exibe a string processada
-        printf("Recebida solicitação de string: %s\n", tarefa->dados);
-    }
-    }
-
-// Função que adiciona uma nova tarefa à fila de tarefas
-// Protegida por mutex para garantir a consistência da fila
-void adicionarTarefa(Tarefa tarefa) {
-    pthread_mutex_lock(&mutexFila); // Trava o mutex antes de acessar a fila
-    filaTarefas[quantidadeTarefas] = tarefa; // Adiciona a nova tarefa no final da fila
-    quantidadeTarefas++; // Incrementa o contador de tarefas
-    pthread_mutex_unlock(&mutexFila); // Libera o mutex
-    pthread_cond_signal(&condFila); // Sinaliza que há uma nova tarefa disponível
-}
-
-// Função que processa requisições de números ou strings, dependendo do tipo de thread (números ou strings)
-// Param: arg - um ponteiro que indica o tipo de requisição (número = 1, string = 0)
-void* processarRequisicao(void* arg) {
-    int tipoRequisicaoNumero = *((int*)arg); // Define se a thread processa números ou strings
-    free(arg); // Libera a memória alocada para o argumento
-
+void* enviarDados(void* arg) {
+    int* parametros = (int*)arg;
+    int clienteId = parametros[0]; 
+    int tipoDado = parametros[1]; 
     char buffer[256];
-    int fd;
-    ssize_t bytesLidos;
+    char fifoResposta[256];
 
-    while (1) { // Loop infinito para processar requisições continuamente
-        Tarefa tarefa; // Estrutura que irá armazenar a requisição
+    // Criação do FIFO de resposta para este cliente
+    snprintf(fifoResposta, sizeof(fifoResposta), "%s%d", FIFO_RESPOSTA_BASE, clienteId);
+    mkfifo(fifoResposta, 0666);
 
-        if (tipoRequisicaoNumero) {
-            // Abre o pipe nomeado para números e lê a requisição
-            fd = open(fifo_numeros, O_RDONLY);
+    while (1) {
+        int fd;
+        if (tipoDado == 1) {
+            fd = open(FIFO_NUMEROS, O_WRONLY);
             if (fd == -1) {
-                perror("Falha ao abrir fifo_numeros");
-                continue;
+                perror("Erro ao abrir o pipe para números");
+                exit(EXIT_FAILURE);
             }
-            bytesLidos = read(fd, buffer, sizeof(buffer)); // Lê os dados do pipe
-            close(fd);
 
-            if (bytesLidos > 0) { // Verifica se houve leitura de dados
-                buffer[bytesLidos] = '\0'; // Adiciona o caractere nulo no final da string
-                tarefa.tipo = REQUISICAO_NUMERO; // Define o tipo de requisição como número
-                strncpy(tarefa.dados, buffer, sizeof(tarefa.dados)); // Copia os dados lidos para a estrutura Tarefa
-                adicionarTarefa(tarefa); // Adiciona a tarefa à fila
-            }
-        } else {
-            // Abre o pipe nomeado para strings e lê a requisição
-            fd = open(fifo_strings, O_RDONLY);
+            snprintf(buffer, sizeof(buffer), "Cliente %d: %s", clienteId, fifoResposta);
+            write(fd, buffer, strlen(buffer) + 1);
+            printf("Cliente %d enviou uma solicitação de número\n", clienteId);
+        } else if (tipoDado == 2) {
+            fd = open(FIFO_STRINGS, O_WRONLY);
             if (fd == -1) {
-                perror("Falha ao abrir fifo_strings");
-                continue;
+                perror("Erro ao abrir o pipe para strings");
+                exit(EXIT_FAILURE);
             }
-            bytesLidos = read(fd, buffer, sizeof(buffer)); // Lê os dados do pipe
-            close(fd);
 
-            if (bytesLidos > 0) { // Verifica se houve leitura de dados
-                buffer[bytesLidos] = '\0'; // Adiciona o caractere nulo no final da string
-                tarefa.tipo = REQUISICAO_STRING; // Define o tipo de requisição como string
-                strncpy(tarefa.dados, buffer, sizeof(tarefa.dados)); // Copia os dados lidos para a estrutura Tarefa
-                adicionarTarefa(tarefa); // Adiciona a tarefa à fila
-            }
+            snprintf(buffer, sizeof(buffer), "Cliente %d: %s", clienteId, fifoResposta);
+            write(fd, buffer, strlen(buffer) + 1);
+            printf("Cliente %d enviou uma solicitação de string\n", clienteId);
         }
+
+        close(fd);
+        sleep(3); 
     }
+
+    return NULL;
 }
 
-// Função que processa a fila de tarefas
-// Retira as tarefas da fila em ordem e executa uma a uma
-void* processarFilaTarefas(void* args) {
-    while (1) { // Loop infinito para processar tarefas da fila
-        Tarefa tarefa;
+void* lerDados(void* arg) {
+    int* parametros = (int*)arg;
+    int clienteId = parametros[0]; 
+    int tipoDado = parametros[1]; 
+    ssize_t bytesLidos;
+    char buffer[256];
+    char fifoResposta[256];
 
-        pthread_mutex_lock(&mutexFila); // Trava o mutex para acessar a fila
-        while (quantidadeTarefas == 0) { // Espera até que haja uma tarefa na fila
-            pthread_cond_wait(&condFila, &mutexFila); // Aguarda sinalização de nova tarefa
+    // Criação do FIFO de resposta exclusivo para este cliente
+    snprintf(fifoResposta, sizeof(fifoResposta), "%s%d", FIFO_RESPOSTA_BASE, clienteId);
+    
+    while (1) {
+        // Abre o FIFO de resposta exclusivo para este cliente
+        int fd = open(fifoResposta, O_RDONLY);
+        if (fd == -1) {
+            perror("Falha ao abrir FIFO de resposta do cliente");
+            continue;
         }
 
-        // Retira a primeira tarefa da fila
-        tarefa = filaTarefas[0];
-        for (int i = 0; i < quantidadeTarefas - 1; i++) {
-            filaTarefas[i] = filaTarefas[i + 1]; // Move as tarefas restantes para o início da fila
-        }
-        quantidadeTarefas--; // Decrementa o contador de tarefas
-        pthread_mutex_unlock(&mutexFila); // Libera o mutex
+        // Lê a resposta do servidor
+        bytesLidos = read(fd, buffer, sizeof(buffer));
+        close(fd);
 
-        executarTarefa(&tarefa); // Executa a tarefa retirada da fila
+        if (bytesLidos == -1) {
+            perror("Erro ao ler do FIFO");
+            continue;
+        }
+
+        if (bytesLidos > 0) {
+            buffer[bytesLidos] = '\0'; // Garantir que a string seja bem terminada
+            printf("Cliente %d recebeu resposta: %s\n", clienteId, buffer);
+        }
+
+        // Pausa antes de tentar ler novamente
+        sleep(3); // Ajuste o tempo conforme necessário
     }
+
+    return NULL;
 }
 
 int main() {
-    pthread_t threadsNumeros[THREAD_NUM_NUMBERS + THREAD_NUM_STRINGS]; // Threads para processar números e strings
-    pthread_t threadProcessadorTarefas; // Thread que processa a fila de tarefas
+    pthread_t thread, thread2;
+    int parametros[2]; 
 
-    // Inicializa mutex e condição de fila
-    pthread_mutex_init(&mutexFila, NULL);
-    pthread_cond_init(&condFila, NULL);
+    srand(time(NULL));
 
-    // Cria os pipes nomeados (FIFOs) para números e strings
-    mkfifo(fifo_numeros, 0666);
-    mkfifo(fifo_strings, 0666);
+    printf("Insira o identificador do cliente: ");
+    scanf("%d", &parametros[0]);
 
-    // Cria as threads que processam números
-    for (int i = 0; i < THREAD_NUM_NUMBERS; i++) {
-        int *tipoRequisicaoNumero = malloc(sizeof(int));
-        *tipoRequisicaoNumero = 1; // Define como thread de números
-        pthread_create(&threadsNumeros[i], NULL, processarRequisicao, tipoRequisicaoNumero);
+    printf("Escolha o tipo de solicitação:\n");
+    printf("1 - Número\n");
+    printf("2 - String\n");
+    printf("Sua escolha: ");
+    scanf("%d", &parametros[1]);
+
+    if (parametros[1] != 1 && parametros[1] != 2) {
+        printf("Escolha inválida! Saindo...\n");
+        exit(EXIT_FAILURE);
     }
 
-    // Cria as threads que processam strings
-    for (int i = 0; i < THREAD_NUM_STRINGS; i++) {
-        int *tipoRequisicaoNumero = malloc(sizeof(int));
-        *tipoRequisicaoNumero = 0; // Define como thread de strings
-        pthread_create(&threadsNumeros[THREAD_NUM_NUMBERS + i], NULL, processarRequisicao, tipoRequisicaoNumero);
+    int* parametrosThread1 = malloc(sizeof(int) * 2);
+    parametrosThread1[0] = parametros[0];
+    parametrosThread1[1] = parametros[1];
+
+    if (pthread_create(&thread, NULL, enviarDados, (void*)parametrosThread1) != 0) {
+        perror("Erro ao criar a thread");
+        exit(EXIT_FAILURE);
     }
 
     int* parametrosThread2 = malloc(sizeof(int) * 2);
@@ -158,11 +129,6 @@ int main() {
         perror("Erro ao criar a thread");
         exit(EXIT_FAILURE);
     }
-    pthread_join(threadProcessadorTarefas, NULL);
-
-    // Destroi mutex e condição
-    pthread_mutex_destroy(&mutexFila);
-    pthread_cond_destroy(&condFila);
 
     pthread_join(thread, NULL);
     pthread_join(thread2, NULL);
