@@ -44,7 +44,6 @@ void PrintPageFaults()
         }
     }
 
-    printf("Page Faults - Minor: %d, Major: %d\n", minorFaults, majorFaults);
 }
 
 void BusyWait(int ms)
@@ -62,7 +61,7 @@ void FastMeasure()
     printf("Busy waiting to raise the CPU frequency...\n");
     BusyWait(500);
 
-    const int bufSizes[] = {1024 * 1024 * 1024, 2 * 1024 * 1024 * 1024, 4 * 1024 * 1024 * 1024}; // 1 GB, 2 GB, 4 GB
+    const int bufSizes[] = {1024 * 1024 * 1024}; // 1 GB, 2 GB, 4 GB
     const int iterationCount = 100;
 
     for (int bufSize : bufSizes)
